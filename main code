@@ -1,0 +1,248 @@
+#include <iostream>
+#include <vector>
+#include <string>
+#include <chrono> // for seeding
+#include <cctype> // for tolower, isalpha
+using namespace std;
+
+// Trie Node structure
+struct TrieNode {
+    bool isEndOfWord;
+    TrieNode* children[26];
+    TrieNode(){
+        isEndOfWord = false;
+        for(int i = 0; i < 26; i++) children[i] = NULL;
+    }
+};
+
+class Trie {
+private:
+    TrieNode* root;
+
+    void collectWords(TrieNode* node, string prefix, vector<string> &words) {
+        if (node == NULL) return;
+
+        if (node->isEndOfWord) words.push_back(prefix);
+
+        for (int i = 0; i < 26; i++) {
+            if (node->children[i]) {
+                collectWords(node->children[i], prefix + (char)('a' + i), words);
+            }
+        }
+    }
+
+public:
+    Trie(){
+        root = new TrieNode();
+    }
+
+    void insertWord(string word){
+        for (auto &c : word) {
+            c = tolower(c);
+        }
+
+        TrieNode* temp = root;
+        for(int i = 0; i < word.length(); i++) {
+            int index = word[i] - 'a';
+            if(temp->children[index] == NULL) {
+                temp->children[index] = new TrieNode();
+            }
+            temp = temp->children[index];
+        }
+        temp->isEndOfWord = true;
+    }
+
+    bool searchWord(string word){
+        for (auto &c : word) {
+            c = tolower(c);
+        }
+
+        TrieNode* temp = root;
+        for(int i = 0; i < word.length(); i++) {
+            int index = word[i] - 'a';
+            if(temp->children[index] == NULL) return false;
+            temp = temp->children[index];
+        }
+        return temp->isEndOfWord;
+    }
+
+    vector<string> getWordsWithPrefix(string prefix) {
+        for (auto &c : prefix) {
+            c = tolower(c);
+        }
+
+        vector<string> words;
+        TrieNode* temp = root;
+
+        for(int i = 0; i < prefix.length(); i++) {
+            int index = prefix[i] - 'a';
+            if(temp->children[index] == NULL) return words;
+            temp = temp->children[index];
+        }
+
+        collectWords(temp, prefix, words);
+        return words;
+    }
+};
+
+void greet(){
+    cout<<"=============\n";
+    cout<<" Hangman: The DSA Challenge\n";
+    cout<<"=============\n";
+    cout<<"Save your friend by guessing letters!\n\n";
+}
+
+void displayStatus(vector<char>incorrect, string answer) {
+    cout<<"Incorrect Guesses: "; 
+    for (auto &c : incorrect) cout << c << " "; 
+    cout << endl;
+
+    cout<<"Word: "; 
+    for (auto &c : answer) cout << c << " "; 
+    cout << endl;
+}
+
+void displayHangman(int misses) {
+    if (misses == 0) {
+        cout<<"  +---+ \n";
+        cout<<"  |   | \n";
+        cout<<"      | \n";
+        cout<<"      | \n";
+        cout<<"      | \n";
+        cout<<"      | \n";
+        cout<<" ========= \n";
+
+    } else if (misses == 1) {
+        cout<<"  +---+ \n";
+        cout<<"  |   | \n";
+        cout<<"  O   | \n";
+        cout<<"      | \n";
+        cout<<"      | \n";
+        cout<<"      | \n";
+        cout<<" ========= \n";
+
+    } else if (misses == 2) {
+        cout<<"  +---+ \n";
+        cout<<"  |   | \n";
+        cout<<"  O   | \n";
+        cout<<"  |   | \n";
+        cout<<"      | \n";
+        cout<<"      | \n";
+        cout<<" ========= \n";
+
+    } else if (misses == 3) {
+        cout<<"  +---+ \n";
+        cout<<"  |   | \n";
+        cout<<"  O   | \n";
+        cout<<" /|   | \n";
+        cout<<"      | \n";
+        cout<<"      | \n";
+        cout<<" ========= \n";
+
+    } else if (misses == 4) {
+        cout<<"  +---+ \n";
+        cout<<"  |   | \n";
+        cout<<"  O   | \n";
+        cout<<" /|\\  | \n";
+        cout<<"      | \n";
+        cout<<"      | \n";
+        cout<<" ========= \n";
+
+    } else if (misses == 5) {
+        cout<<"  +---+ \n";
+        cout<<"  |   | \n";
+        cout<<"  O   | \n";
+        cout<<" /|\\  | \n";
+        cout<<" /    | \n";
+        cout<<"      | \n";
+        cout<<" ========= \n";
+
+    } else if (misses == 6) {
+        cout<<"  +---+ \n";
+        cout<<"  |   | \n";
+        cout<<"  O   | \n";
+        cout<<" /|\\  | \n";
+        cout<<" / \\  | \n";
+        cout<<"      | \n";
+        cout<<" ========= \n";
+
+    }
+}
+
+void hangmanGame(Trie &trie) {
+    // List of words for hangman
+    vector<string> words = {"apple", "banana", "cherry", "grape"};
+    // Insert into trie
+    for (auto &w : words) {
+        for (auto &c : w) c = tolower(c);
+        trie.insertWord(w);
+    }
+
+    // Choose a word to guess (with randomness)
+    srand((unsigned int)time(NULL));
+
+    int index = rand() % words.size();
+    string codeword = words[index];
+    for (auto &c : codeword) c = tolower(c);
+
+    string answer(codeword.size(), '_'); // mask with underscores
+
+    vector<char>incorrect;
+    int maxMisses = 6;
+    int miss = 0;
+
+    greet();
+
+    while (miss < maxMisses && answer.find('_') != string::npos) {
+        cout << endl;
+        cout << "Guess a letter (or ? for hint): "; 
+        char guess;
+        cin >> guess;
+
+        if (isalpha(guess)) {
+            guess = tolower(guess);
+        } else if (guess == '?') {
+            cout << "Enter a prefix for hint: "; 
+            string prefix;
+            cin >> prefix;
+
+            vector<string> hints = trie.getWordsWithPrefix(prefix);
+            cout << "Words with prefix \"" << prefix << "\" : "; 
+            for (auto &w : hints) cout << w << " "; 
+            cout << endl;
+
+            continue;
+        }
+
+        bool correct = false;
+        for (int i = 0; i < codeword.size(); i++) {
+            if (codeword[i] == guess) {
+                answer[i] = guess;
+                correct = true;
+            }
+        }
+
+        if (!correct) {
+            miss++;
+            incorrect.push_back(guess);
+        }
+
+        displayHangman(miss);
+        displayStatus(incorrect, answer);
+    }
+
+    if (miss == maxMisses) {
+        cout << "Sorry! You lose. The word was: " << codeword << endl;
+    } else {
+        cout << "Congratulations! You guessed the word!" << endl;
+    }
+}
+
+int main()
+{
+    Trie trie;
+
+    hangmanGame(trie);
+
+    return 0;
+}
